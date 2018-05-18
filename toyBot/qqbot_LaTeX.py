@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-  
 from qqbot import QQBotSlot as qqbotslot, RunBot
+from pandas import isnull
 import urllib.request as req
-import re
-import random
+import pandas as pd
+import re, random
+
+
 
 def getNews():
     url = 'http://www.latexstudio.net'
@@ -26,39 +29,22 @@ def getNews():
 
     return tit[0] + '：' + u2l
 
+def QQGroupDic():
+    return {'LaTeX 学习交流群':['LaTeX',csv2dic('LaTeX')],
+            '书籍分享':['Book',csv2dic('Book')],
+            'SUSTech_MATLAB':['MATLAB',csv2dic('MATLAB')],
+            'Test':['LaTeX',csv2dic('LaTeX')]}
 
-def QQGroupName():
-    return ['LaTeX 学习交流群','书籍分享群','SUSTech_MATLAB']
-
-def getDictLaTeX():
-    # key为回答，value为关键词
-    dic = {'Happy LaTeXing!~':                                                                                       ['hello','hi','你好'],
-           'TeX Live 2018下载：http://mirrors.ustc.edu.cn/CTAN/systems/texlive/Images/':                             ['下载','安装'],
-           'LaTeX简历：http://www.latexstudio.net/archives/12402':                                                   ['简历'],
-           'Tikz&PGF：http://www.latexstudio.net/archives/category/tex-graphics/tikz-example':                       ['tikz','pgf'],
-           'lshort到这里下载：http://www.latexstudio.net/tex-documents':                                             ['lshort'],
-           'sustc.edu.cn':                                                                                           ['南方科技大学'],
-           '南方科技大学beamer主题模板：http://www.latexstudio.net/archives/11443':                                  ['beamer'],
-           '南方科技大学毕业论文LaTeX模板：http://www.latexstudio.net/archives/8440':                                ['毕业','论文'],
-           '尝试在命令行使用texdoc查看帮助文档，或者登陆网站查看宏包帮助：https://ctan.org/topic。新手请先看lshort~':['帮助'],
-           'metapost, pstricks, Tikz&pgf：http://www.latexstudio.net/archives/category/tex-graphics':                ['绘图'],
-           'TeX字体：http://www.latexstudio.net/archives/category/tex-resource/tex-fonts-resource':                  ['字体'],
-           '学术海报：http://www.latexstudio.net/archives/category/tex-slides/latex-poster':                         ['海报'],
-           'LaTeX工作室：http://www.latexstudio.net':                                                                ['网站'],
-           '插图整理下载：http://www.latexstudio.net/archives/1010':                                                 ['历史','狮子'],
-           'Overleaf: Real-time Collaborative Writing and Publishing Tools：https://www.overleaf.com/':              ['在线','实时','overleaf']
-           }
-    return dic
-
-def getDictMATLAB():
-    dic = {}
-    return dic
-
-def getDictBook():
-    dic = {'忙(玩)完这阵就更新，不好意思~':['~'],
-           'http://www.yooread.com/8/4548/':['左心房漩涡']}
-    return dic
-
+def csv2dic(name):
+    file = pd.read_csv(name+'.csv',encoding='UTF-8')
+    lst  = file.values
+    keys = []
+    vals = []
+    for line in lst:
+        keys.append(line[0])
+        count = isnull(line).sum()
+        vals.append(line[1:4-count].tolist())
+    return dict(zip(keys,vals))
 
 def OR(lst, content):
     # 内容中是否包含lst中任意字符串
@@ -67,54 +53,57 @@ def OR(lst, content):
         flag = flag or v in content
     return flag
 
+def extraFunction(contact,content):
+    flag = 0
+    con  = ''
+    if contact.name=='Test':#'LaTeX 学习交流群':
+        if '文章' in content:
+            flag = 1
+            con  = getNews()
+    return flag, con
+
+def lst2str(lst):
+    result = '\"'+lst[0]+'\",'
+    for i in range(1,len(lst)):
+        result = result + '\"' + str(lst[i]) + '\",'
+    return result[:-1]+'\n'
+
+
 
 
 @qqbotslot
 
-def onQQMessage(bot, contact, member, content):  
+def onQQMessage(bot, contact, member, content):
     #if getattr(member, 'uin', None) != bot.conf.qq:
     if not bot.isMe(contact, member):
         content  = content.lower()
-
-        # LaTeX
-        if contact.name == QQGroupName()[0]:
-            DicLaTeX = getDictLaTeX()
-            keyLaTeX = list(DicLaTeX.keys())
-            valLaTeX = list(DicLaTeX.values())
-            if '李未晏' in content:
-                bot.SendTo(contact, '谁？')
-            for v in keyLaTeX:
-                if OR(list(DicLaTeX[v]),content):
-                    bot.SendTo(contact, v)
-            if '文章' in content:
-                bot.SendTo(contact, getNews())
-            # 关键词
-            if '关键词' in content:
-                keywords = str(valLaTeX).replace('[','').replace(']','').replace('\'','')
-                bot.SendTo(contact, str(keywords)+'\nhttps://github.com/Iydon/LaTeX-Group_Keywords')
-        # Book
-        if contact.name == QQGroupName()[1]:
-            DicBook = getDictBook()
-            keyBook = list(DicBook.keys())
-            valBook = list(DicBook.values())
-            for v in keyBook:
-                if OR(list(DicBook[v]),content):
-                    bot.SendTo(contact, v)
-            if '关键词' in content:
-                keywords = str(valBook).replace('[','').replace(']','').replace('\'','')
-                bot.SendTo(contact, str(keywords))
-        # MATLAB
-        if contact.name == QQGroupName()[2]:
-            DicMATLAB = getDictMATLAB()
-            keyMATLAB = list(DicMATLAB.keys())
-            valMATLAB = list(DicMATLAB.values())
-            for v in keyMATLAB:
-                if OR(list(DicBook[v]),content):
-                    bot.SendTo(contact, v)
-            if '关键词' in content:
-                keywords = str(valBook).replace('[','').replace(']','').replace('\'','')
-                bot.SendTo(contact, str(keywords))
+        DICT = QQGroupDic()
+        KEYS = list(DICT.keys())
+        for groupName in KEYS:
+            if contact.name == groupName:
+                dic  = DICT[groupName][1]
+                keys = list(dic.keys())
+                vals = list(dic.values())
+                for k in keys:
+                    if OR(list(dic[k]),content):
+                        bot.SendTo(contact, k)
+                # 加入pass，改变顺序
+                if re.match('^写入关键词 +\S+ +\S+',content):
+                    toDo = re.split(' +',' '+content.replace('写入关键词','')+' ')[1:-1]
+                    with open(DICT[groupName][0]+'.csv','a+',encoding='UTF-8') as f:
+                        f.write(lst2str(toDo))
+                    bot.SendTo(contact, '添加成功')
+                if re.match('^删除关键词 +\S+',content):
+                    toDo = re.split(' +',' '+content.replace('写入关键词','')+' ')[1]
+                if content=='关键词':
+                    keywords = str(vals).replace('[','').replace(']','').replace('\'','')
+                    bot.SendTo(contact, keywords)
+        flag,con = extraFunction(contact, content)
+        if flag:
+            bot.SendTo(contact, con)
 
 
-if __name__ == '__main__':  
-    RunBot()  
+if __name__ == '__main__':
+    #DICT = QQGroupDic()
+    #KEYS = list(DICT.keys())
+    RunBot()
