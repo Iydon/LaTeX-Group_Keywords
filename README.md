@@ -1,9 +1,12 @@
 # Current Keywords for robot
+## LaTeX
 
 - beamer
+- bibtex
 - hello
 - hi
 - lshort
+- mwe
 - overleaf
 - pgf
 - tikz
