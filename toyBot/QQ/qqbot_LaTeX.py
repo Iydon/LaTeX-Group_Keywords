@@ -10,6 +10,7 @@ import re, random
 def getNews():
     # 随机返回 latexstudio.net 网站内容。
     # TODO：可以优化此处，不必再次打开网页获取标题。
+    # 可参照WeChat机器人进行修改。
     url = 'http://www.latexstudio.net'
     try:
         content = req.urlopen(url).read().decode(encoding='UTF-8',errors='strict')
@@ -56,14 +57,46 @@ def OR(lst, content):
         flag = flag or v in content
     return flag
 
+def UploadImage():#bot,contact):
+    f = open('result.log', 'r')
+    for line in f:
+        break
+    reUrl    = re.findall('(?<=\"url\":\")[\s\S]+?(?=\")',line)[0].replace('\\','')
+    #delHash  = re.findall('(?<=\"delete\":\")[\s\S]+?(?=\")',line)[0].replace('\\','')
+    #bot.SendTo(contact, reUrl)
+    #print(reUrl)
+    #print(delHash)
+    os.system('bash step.sh 4')
+    #time.sleep(60)
+    #c = requests.post(delHash)
+    return reUrl
+
 def extraFunction(contact,content):
     # 附加功能。
     flag = 0
     con  = ''
     if contact.name=='LaTeX 学习交流群':
-        if '文章' in content:
+        if '文章' == content:
             flag = 1
             con  = getNews()
+            return flag, con
+        if content[:8].lower() == 'formula ':
+            flag = 1
+            try:
+                content = content[7:]
+                os.system('bash step.sh 1')
+                #os.system("echo %s >> main.tex"%content)
+                with open('main.tex', 'a+') as f:
+                    f.write(content+'\n')
+                os.system('bash step.sh 2')
+                pdf2png(name='out')
+                os.system('bash step.sh 3')
+                #t = threading.Thread(target=UploadImage(bot,contact), name='Upload')
+                #t.start()
+                con = 'Formula: '+UploadImage()
+            except:
+                con = 'Formula: Error!'
+            return flag, con
     return flag, con
 
 def lst2str(lst, flag=0):
